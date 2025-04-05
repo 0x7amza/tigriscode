@@ -1,41 +1,48 @@
-const db = require("../models");
-const User = db.user;
-const Session = db.session;
+const { User, Session } = require("../models");
 const { Op } = require("sequelize");
-
 const auth = async (req, res, next) => {
-  const { identifier, password, token } = req.body;
-  if (!identifier || !password || !token) {
-    res.status(400).send({
-      message: "Content can not be empty!",
+  try {
+    const token = req.body?.token || req.query?.token || req.headers?.token;
+    if (!token) {
+      return res.status(400).send({
+        message: "Token can not be empty!",
+      });
+    }
+
+    const session = await Session.findOne({
+      where: {
+        token,
+      },
     });
-    return;
-  }
-  const user = await User.findOne({
-    where: {
-      [Op.or]: [{ universityNumber: identifier }, { email: identifier }],
-      password,
-    },
-  });
-  if (!user) {
-    res.status(400).send({
-      message: "Invalid Credentials!",
+
+    if (!session) {
+      return res.status(400).send({
+        message: "Invalid Credentials!",
+      });
+    }
+
+    const userId = session.userId;
+
+    const user = await User.findOne({
+      where: {
+        id: userId,
+      },
     });
-    return;
-  }
-  const session = await Session.findOne({
-    where: {
-      token,
-    },
-  });
-  if (!session) {
-    res.status(400).send({
-      message: "Invalid Credentials!",
+
+    if (!user) {
+      return res.status(400).send({
+        message: "Invalid Credentials!",
+      });
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error("Authentication error:", error);
+    res.status(500).send({
+      message: "Internal Server Error",
     });
-    return;
   }
-  req.user = user;
-  next();
 };
 
 module.exports = auth;

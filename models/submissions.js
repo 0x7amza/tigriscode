@@ -45,7 +45,7 @@ module.exports = (Sequelize, DataTypes) => {
       type: DataTypes.FLOAT,
       allowNull: true,
     },
-    memoryUsed: {
+    ؤ: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },

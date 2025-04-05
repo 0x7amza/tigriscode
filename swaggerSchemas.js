@@ -60,22 +60,12 @@
  *           items:
  *             type: object
  *           description: The test cases for the question.
- *         difficultyLevelId:
- *           type: integer
+ *         difficultyLevel:
+ *           type: Enum
+ *           enum: [easy, medium, hard]
  *           description: The ID of the difficulty level associated with the question.
  *
- *     DifficultyLevel:
- *       type: object
- *       properties:
- *         id:
- *           type: integer
- *           description: The unique identifier for the difficulty level.
- *         level:
- *           type: string
- *           description: The name of the difficulty level.
- *         points:
- *           type: integer
- *           description: The points associated with the difficulty level.
+
  *
  *     Favorite:
  *       type: object

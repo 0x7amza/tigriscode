@@ -83,7 +83,7 @@ router.get("/:id", questionController.findOne);
  *         required: true
  *         schema:
  *           type: string
- *           format: uuid
+ *           format: int64
  *         description: The ID of the question
  *     requestBody:
  *       required: true

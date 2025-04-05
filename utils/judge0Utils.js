@@ -1,14 +1,15 @@
 const axios = require("axios");
-
+const { Language } = require("../models");
 const JUDGE0_API_URL = "http://localhost:2358";
+const codeGeneratorUtils = require("./codeGeneratorUtils");
 
-async function submitCode(sourceCode, languageId, stdin = "") {
+async function submitCode(sourceCode, language_id, stdin = "") {
   try {
     const response = await axios.post(
       `${JUDGE0_API_URL}/submissions`,
       {
         source_code: sourceCode,
-        language_id: languageId,
+        language_id,
         stdin: Buffer.from(stdin).toString("base64"),
       },
       {
@@ -29,6 +30,7 @@ async function submitCode(sourceCode, languageId, stdin = "") {
 async function getSubmissionStatus(token) {
   try {
     const response = await axios.get(`${JUDGE0_API_URL}/submissions/${token}`);
+
     return response.data;
   } catch (error) {
     console.error(
@@ -39,28 +41,42 @@ async function getSubmissionStatus(token) {
   }
 }
 
-async function runCodeWithTestCases({ sourceCode, languageId, testCases }) {
+async function runCodeWithTestCases({
+  sourceCode,
+  languageId,
+  testCases,
+  question,
+}) {
   const results = [];
+  const language = await Language.findByPk(languageId);
+  const language_id = language.judge0LanguageId;
+  const languageName = language.name;
 
   for (const testCase of testCases) {
     const { input, expectedOutput } = testCase;
 
-    const token = await submitCode(sourceCode, languageId, input);
+    const formattedInput = input.split(" ");
+    code = codeGeneratorUtils.wrapUserCodeForExecution(
+      sourceCode,
+      question.functionName,
+      JSON.parse(question.parameters),
+      question.returnType,
+      languageName,
+      formattedInput
+    );
+
+    const token = await submitCode(code, language_id, formattedInput);
 
     let result;
     while (true) {
       result = await getSubmissionStatus(token);
-
-      if (result.status_id === 3) {
+      if (result.status !== null) {
         break;
       }
-
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
 
-    const actualOutput = Buffer.from(result.stdout || "", "base64").toString(
-      "utf-8"
-    );
+    const actualOutput = result.stdout.replace(/\n$/, "");
 
     const passed = actualOutput.trim() === expectedOutput.trim();
 
@@ -69,6 +85,8 @@ async function runCodeWithTestCases({ sourceCode, languageId, testCases }) {
       output: actualOutput,
       expectedOutput,
       passed,
+      statusDescription: result.status.description,
+      compile_output: result.compile_output,
     });
   }
   return results;
@@ -76,4 +94,5 @@ async function runCodeWithTestCases({ sourceCode, languageId, testCases }) {
 
 module.exports = {
   runCodeWithTestCases,
+  getSubmissionStatus,
 };

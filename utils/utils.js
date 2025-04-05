@@ -47,4 +47,45 @@ const extractUserData = async (url) => {
   }
 };
 
-module.exports = { extractUserData, generateToken };
+const questionMarkDown = ({ testCases, title, description, parameters }) => {
+  let exampleMarkdown = "";
+  for (let i = 0; i < Math.min(testCases.length, 2); i++) {
+    const testC = testCases[i];
+    const inputValues = testC.input.split(" ");
+    let formattedInputs = parameters
+      .map((param, index) => `\`${param.name} = ${inputValues[index]}\``)
+      .join("\n");
+
+    exampleMarkdown += `
+  ## Example ${i + 1}
+  
+  ### Input  
+  ${formattedInputs}
+  
+  ### Output  
+  \`${testC.expectedOutput}\`
+  `;
+  }
+
+  const QuestionMarkDown = `# ${title}
+  
+  ### ${description}  
+  
+  ${exampleMarkdown}
+  `.trim();
+  return QuestionMarkDown;
+};
+
+const generateOTP = () => {
+  const otp = Math.floor(100000 + Math.random() * 900000);
+  return otp;
+};
+
+const sendOTP = async (email, otp) => {};
+module.exports = {
+  extractUserData,
+  generateToken,
+  questionMarkDown,
+  generateOTP,
+  sendOTP,
+};

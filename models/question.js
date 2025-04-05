@@ -31,15 +31,9 @@ module.exports = (Sequelize, DataTypes) => {
         type: DataTypes.JSON,
         allowNull: false,
       },
-      difficultyLevelId: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        references: {
-          model: "difficulty_levels",
-          key: "id",
-        },
-        onUpdate: "CASCADE",
-        onDelete: "SET NULL",
+      difficultyLevel: {
+        type: DataTypes.ENUM("easy", "medium", "hard"),
+        allowNull: false,
       },
     },
     {
@@ -48,10 +42,6 @@ module.exports = (Sequelize, DataTypes) => {
   );
 
   Question.associate = (models) => {
-    Question.belongsTo(models.DifficultyLevel, {
-      foreignKey: "difficultyLevelId",
-      as: "difficultyLevel",
-    });
     Question.hasMany(models.Submission, {
       foreignKey: "questionId",
       as: "submissions",

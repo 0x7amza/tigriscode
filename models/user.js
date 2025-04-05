@@ -14,10 +14,6 @@ module.exports = (Sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      password: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
       profilePicture: {
         type: DataTypes.STRING,
         allowNull: true,
@@ -53,6 +49,10 @@ module.exports = (Sequelize, DataTypes) => {
       through: models.Favorite,
       as: "favorites",
       foreignKey: "userId",
+    });
+    User.hasMany(models.Notification, {
+      foreignKey: "userId",
+      onDelete: "CASCADE",
     });
   };
 

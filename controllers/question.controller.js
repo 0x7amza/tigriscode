@@ -1,7 +1,14 @@
-const { User, Submission, DifficultyLevel, Question } = require("../models");
+const {
+  User,
+  Submission,
+  DifficultyLevel,
+  Question,
+  Language,
+} = require("../models");
 const judgeUtils = require("../utils/judge0Utils");
 const Sequelize = require("sequelize");
 const codeGenrationUtils = require("../utils/codeGeneratorUtils");
+const utils = require("../utils/utils");
 
 const create = (req, res) => {
   const {
@@ -48,7 +55,7 @@ const create = (req, res) => {
       });
     });
 };
-
+//get paginated questions
 const findAll = async (req, res) => {
   const {
     page = 1,
@@ -65,11 +72,6 @@ const findAll = async (req, res) => {
 
     const whereClause = {};
     const include = [
-      {
-        model: DifficultyLevel,
-        as: "difficultyLevel",
-        attributes: ["level", "points"],
-      },
       {
         model: Submission,
         as: "submissions",
@@ -103,7 +105,7 @@ const findAll = async (req, res) => {
 
     const questions = await Question.findAndCountAll({
       where: whereClause,
-      attributes: ["id", "title", "description", "difficultyLevelId"],
+      attributes: ["id", "title", "description", "difficultyLevel"],
       include,
       offset,
       limit: parseInt(limit),
@@ -140,9 +142,8 @@ const findAll = async (req, res) => {
   }
 };
 
-const findOne = (req, res) => {
+const findOne = async (req, res) => {
   const id = req.params.id;
-
   Question.findByPk(id, {
     include: {
       model: DifficultyLevel,
@@ -150,32 +151,40 @@ const findOne = (req, res) => {
       attributes: ["level", "points"],
     },
   })
-    .then((data) => {
+    .then(async (data) => {
       if (!data) {
         res.status(404).send({
           message: "Not found Question with id " + id,
         });
         return;
       }
-      let parameters = [];
-      try {
-        parameters = JSON.parse(data.parameters);
-      } catch (error) {
-        return res.status(400).send({
-          message: "Invalid parameters format",
-        });
-      }
-
-      const code = codeGenrationUtils.generateDefaultCode(
-        "python",
-        data.functionName,
+      const languages = await Language.findAll();
+      const testCases = JSON.parse(data.testCases);
+      const parameters = JSON.parse(data.parameters);
+      const QuestionMarkDown = utils.questionMarkDown({
+        testCases,
+        title: data.title,
+        description: data.description,
         parameters,
-        data.returnType
-      );
+      });
+      data.setDataValue("markdown", QuestionMarkDown);
 
-      data.setDataValue("code", code);
-
-      res.send(data);
+      res.send({
+        markdown: QuestionMarkDown,
+        difficultyLevel: data.difficultyLevel,
+        testCases,
+        parameters,
+        defaultCode: languages.map((lang) => ({
+          id: lang.id,
+          name: lang.name,
+          code: codeGenrationUtils.generateDefaultCode(
+            lang.name,
+            data.functionName,
+            parameters,
+            data.returnType
+          ),
+        })),
+      });
     })
     .catch((err) => {
       res.status(500).send({
@@ -194,14 +203,15 @@ const runCode = async (req, res) => {
       return res.status(404).json({ error: "Question not found." });
     }
 
-    const testCases = Array.isArray(question.testCases)
-      ? question.testCases.slice(0, 3)
+    const testCases = Array.isArray(JSON.parse(question.testCases))
+      ? JSON.parse(question.testCases).slice(0, 3)
       : [];
 
     const results = await judgeUtils.runCodeWithTestCases({
       sourceCode: code,
       languageId,
       testCases,
+      question,
     });
 
     const passed = results.every((result) => result.passed);
@@ -212,6 +222,58 @@ const runCode = async (req, res) => {
     res
       .status(500)
       .json({ error: "An error occurred while running the code." });
+  }
+};
+
+const submitCode = async (req, res) => {
+  const { code, languageId, questionId } = req.body;
+  const userId = 1;
+
+  try {
+    const question = await Question.findByPk(questionId);
+
+    if (!question) {
+      return res.status(404).json({ error: "Question not found." });
+    }
+
+    const testCases = Array.isArray(JSON.parse(question.testCases))
+      ? JSON.parse(question.testCases)
+      : [];
+
+    const results = await judgeUtils.runCodeWithTestCases({
+      sourceCode: code,
+      languageId,
+      testCases,
+      question,
+    });
+
+    const passed = results.every((result) => result.passed);
+
+    const submission = new Submission({
+      userId,
+      questionId,
+      code,
+      languageId,
+      result: JSON.stringify(results),
+      passed,
+    });
+
+    submission
+      .save(submission)
+      .then((data) => {
+        res.send(data);
+      })
+      .catch((err) => {
+        res.status(500).send({
+          message:
+            err.message || "Some error occurred while creating the Submission.",
+        });
+      });
+  } catch (error) {
+    console.error("Error submitting code:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while submitting the code." });
   }
 };
 
