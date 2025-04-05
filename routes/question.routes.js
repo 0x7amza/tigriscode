@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const questionController = require("../controllers/question.controller");
+const auth = require("../middleware/auth.middleware");
 
 /**
  * @swagger
@@ -43,7 +44,7 @@ const questionController = require("../controllers/question.controller");
  *                   items:
  *                     $ref: '#/components/schemas/Question'
  */
-router.get("/", questionController.findAll);
+router.get("/", auth, questionController.findAll);
 
 /**
  * @swagger
@@ -106,4 +107,28 @@ router.get("/:id", questionController.findOne);
  */
 router.post("/:id/run", questionController.runCode);
 
+/**
+ * @swagger
+ * /api/question/submissions/{id}:
+ *   get:
+ *     summary: Submit code for a specific question
+ *     tags: [Questions]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: int64
+ *         description: The ID of the question
+ *       - in: query
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Submission result
+ */
+router.get("/submissions/:id", auth, questionController.getSubmissions);
 module.exports = router;

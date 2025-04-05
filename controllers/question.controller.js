@@ -58,17 +58,13 @@ const create = (req, res) => {
 //get paginated questions
 const findAll = async (req, res) => {
   const {
-    page = 1,
-    limit = 10,
     search = "",
     filterByStatus = null,
     filterByDifficulty = null,
   } = req.query;
 
   try {
-    const userId = 1;
-
-    const offset = (page - 1) * limit;
+    const userId = req.user.id;
 
     const whereClause = {};
     const include = [
@@ -107,8 +103,6 @@ const findAll = async (req, res) => {
       where: whereClause,
       attributes: ["id", "title", "description", "difficultyLevel"],
       include,
-      offset,
-      limit: parseInt(limit),
       distinct: true,
     });
 
@@ -123,17 +117,18 @@ const findAll = async (req, res) => {
         title: question.title,
         description: question.description,
         difficultyLevel: question.difficultyLevel,
+        score:
+          question.difficultyLevel == "hard"
+            ? 30
+            : question.difficultyLevel == "medium"
+            ? 20
+            : 10,
         isSolved,
         isFavorite,
       };
     });
 
-    res.json({
-      total: questions.count,
-      totalPages: Math.ceil(questions.count / limit),
-      currentPage: parseInt(page),
-      questions: formattedQuestions,
-    });
+    res.json(formattedQuestions);
   } catch (error) {
     console.error("Error fetching questions:", error);
     res
@@ -144,13 +139,7 @@ const findAll = async (req, res) => {
 
 const findOne = async (req, res) => {
   const id = req.params.id;
-  Question.findByPk(id, {
-    include: {
-      model: DifficultyLevel,
-      as: "difficultyLevel",
-      attributes: ["level", "points"],
-    },
-  })
+  Question.findByPk(id)
     .then(async (data) => {
       if (!data) {
         res.status(404).send({
@@ -187,6 +176,7 @@ const findOne = async (req, res) => {
       });
     })
     .catch((err) => {
+      console.error(err);
       res.status(500).send({
         message: "Error retrieving Question with id=" + id,
         error: err.message,
@@ -277,9 +267,42 @@ const submitCode = async (req, res) => {
   }
 };
 
+const getSubmissions = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const submissions = await Submission.findAll({
+      where: {
+        questionId: id,
+        userId,
+      },
+      include: [
+        {
+          model: User,
+          as: "user",
+          attributes: ["name", "profilePicture"],
+        },
+        {
+          model: Language,
+          as: "language",
+          attributes: ["name"],
+        },
+      ],
+    });
+
+    res.json(submissions);
+  } catch (error) {
+    console.error("Error fetching submissions:", error);
+    res.status(500).json({
+      error: "An error occurred while fetching submissions.",
+    });
+  }
+};
 module.exports = {
   create,
   findAll,
   findOne,
   runCode,
+  getSubmissions,
 };

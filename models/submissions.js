@@ -45,10 +45,6 @@ module.exports = (Sequelize, DataTypes) => {
       type: DataTypes.FLOAT,
       allowNull: true,
     },
-    ؤ: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
   });
 
   Submission.associate = (models) => {

@@ -51,7 +51,7 @@ const questionMarkDown = ({ testCases, title, description, parameters }) => {
   let exampleMarkdown = "";
   for (let i = 0; i < Math.min(testCases.length, 2); i++) {
     const testC = testCases[i];
-    const inputValues = testC.input.split(" ");
+    const inputValues = testC.input;
     let formattedInputs = parameters
       .map((param, index) => `\`${param.name} = ${inputValues[index]}\``)
       .join("\n");

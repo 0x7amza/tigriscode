@@ -46,6 +46,8 @@ function getType(type) {
       return "float[]";
     case "array-string":
       return "String[]";
+    case "bool":
+      return "boolean";
     default:
       throw new Error(`Unsupported type: ${type}`);
   }
