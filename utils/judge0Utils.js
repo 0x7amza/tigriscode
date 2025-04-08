@@ -55,7 +55,7 @@ async function runCodeWithTestCases({
   for (const testCase of testCases) {
     const { input, expectedOutput } = testCase;
 
-    const formattedInput = input.split(" ");
+    const formattedInput = input;
     code = codeGeneratorUtils.wrapUserCodeForExecution(
       sourceCode,
       question.functionName,
@@ -70,7 +70,7 @@ async function runCodeWithTestCases({
     let result;
     while (true) {
       result = await getSubmissionStatus(token);
-      if (result.status !== null) {
+      if (result.stdout !== null) {
         break;
       }
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -87,6 +87,7 @@ async function runCodeWithTestCases({
       passed,
       statusDescription: result.status.description,
       compile_output: result.compile_output,
+      time: result.time,
     });
   }
   return results;

@@ -39,20 +39,18 @@ module.exports = (Sequelize, DataTypes) => {
       foreignKey: "userId",
       as: "sessions",
     });
-
     User.hasMany(models.Submission, {
       foreignKey: "userId",
       as: "submissions",
     });
-
-    User.belongsToMany(models.Question, {
-      through: models.Favorite,
-      as: "favorites",
-      foreignKey: "userId",
-    });
     User.hasMany(models.Notification, {
       foreignKey: "userId",
       onDelete: "CASCADE",
+    });
+    User.belongsToMany(models.Question, {
+      through: models.Favorite,
+      as: "favoritedQuestions",
+      foreignKey: "userId",
     });
   };
 

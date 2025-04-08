@@ -33,16 +33,16 @@ module.exports = (Sequelize, DataTypes) => {
         key: "id",
       },
     },
-    sourceCode: {
-      type: DataTypes.TEXT,
-      allowNull: false,
-    },
     result: {
       type: DataTypes.JSON,
       allowNull: true,
     },
     timeTaken: {
       type: DataTypes.FLOAT,
+      allowNull: true,
+    },
+    passed: {
+      type: DataTypes.BOOLEAN,
       allowNull: true,
     },
   });

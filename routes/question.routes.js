@@ -70,7 +70,7 @@ router.get("/", auth, questionController.findAll);
  *       404:
  *         description: Question not found
  */
-router.get("/:id", questionController.findOne);
+router.get("/:id", auth, questionController.findOne);
 
 /**
  * @swagger
@@ -107,28 +107,5 @@ router.get("/:id", questionController.findOne);
  */
 router.post("/:id/run", questionController.runCode);
 
-/**
- * @swagger
- * /api/question/submissions/{id}:
- *   get:
- *     summary: Submit code for a specific question
- *     tags: [Questions]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: int64
- *         description: The ID of the question
- *       - in: query
- *         name: token
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Submission result
- */
-router.get("/submissions/:id", auth, questionController.getSubmissions);
+router.post("/:id/submit", auth, questionController.submitCode);
 module.exports = router;

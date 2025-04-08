@@ -59,6 +59,7 @@ function generateDefaultCode(language, functionName, parameters, returnType) {
   }
   return codeTemplates[language](functionName, parameters, returnType);
 }
+
 function wrapUserCodeForExecution(
   userCode,
   functionName,
@@ -202,6 +203,7 @@ function getTypeValuePython(type, value) {
       throw new Error(`Unsupported type: ${type}`);
   }
 }
+
 function getTypeValueCpp(type, value) {
   switch (type) {
     case "int":
@@ -229,6 +231,41 @@ function getTypeValueJavaScript(type, value) {
       throw new Error(`Unsupported type: ${type}`);
   }
 }
+
+function getTypeConversionJava(type) {
+  switch (type) {
+    case "int":
+      return "int";
+    case "float":
+      return "float";
+    case "double":
+      return "double";
+    case "string":
+      return "String";
+    case "boolean":
+      return "boolean";
+    default:
+      throw new Error(`Unsupported type: ${type}`);
+  }
+}
+
+function getTypeValueJava(type, value) {
+  switch (type) {
+    case "int":
+      return parseInt(value);
+    case "float":
+      return parseFloat(value) + "f"; // Append 'f' for float literals
+    case "double":
+      return parseFloat(value);
+    case "string":
+      return `"${value}"`; // Add quotes around string values
+    case "boolean":
+      return value === "true"; // Convert to boolean
+    default:
+      throw new Error(`Unsupported type: ${type}`);
+  }
+}
+
 module.exports = {
   generateDefaultCode,
   wrapUserCodeForExecution,

@@ -73,9 +73,7 @@ const findAll = async (req, res) => {
         as: "submissions",
         where: {
           userId,
-          result: Sequelize.literal(
-            "JSON_CONTAINS(result, 'true', '$.passed')"
-          ),
+          passed: true,
         },
         required: filterByStatus === "solved",
       },
@@ -139,6 +137,7 @@ const findAll = async (req, res) => {
 
 const findOne = async (req, res) => {
   const id = req.params.id;
+  const userId = req.user.id;
   Question.findByPk(id)
     .then(async (data) => {
       if (!data) {
@@ -157,12 +156,32 @@ const findOne = async (req, res) => {
         parameters,
       });
       data.setDataValue("markdown", QuestionMarkDown);
+      const submissions = await Submission.findAll({
+        where: {
+          questionId: id,
+          userId,
+        },
+        include: [
+          {
+            model: User,
+            as: "user",
+            attributes: ["name", "profilePicture"],
+          },
+          {
+            model: Language,
+            as: "language",
+            attributes: ["name"],
+          },
+        ],
+        order: [["createdAt", "DESC"]],
+      });
 
       res.send({
         markdown: QuestionMarkDown,
         difficultyLevel: data.difficultyLevel,
         testCases,
         parameters,
+        submissions,
         defaultCode: languages.map((lang) => ({
           id: lang.id,
           name: lang.name,
@@ -185,10 +204,15 @@ const findOne = async (req, res) => {
 };
 
 const runCode = async (req, res) => {
-  const { code, languageId, questionId } = req.body;
-  try {
-    const question = await Question.findByPk(questionId);
+  const { code, languageId } = req.body;
+  console.log("runCode", req.body);
 
+  try {
+    const questionId = req.params.id;
+    const question = await Question.findOne({
+      where: { id: questionId },
+    });
+    console.log("question", question);
     if (!question) {
       return res.status(404).json({ error: "Question not found." });
     }
@@ -205,6 +229,7 @@ const runCode = async (req, res) => {
     });
 
     const passed = results.every((result) => result.passed);
+    console.log({ results, passed });
 
     res.json({ results, passed });
   } catch (error) {
@@ -216,10 +241,11 @@ const runCode = async (req, res) => {
 };
 
 const submitCode = async (req, res) => {
-  const { code, languageId, questionId } = req.body;
-  const userId = 1;
-
+  const { code, languageId } = req.body;
+  const userId = req.user.id;
   try {
+    const questionId = req.params.id;
+
     const question = await Question.findByPk(questionId);
 
     if (!question) {
@@ -236,13 +262,31 @@ const submitCode = async (req, res) => {
       testCases,
       question,
     });
-
+    // check if all test cases passed
     const passed = results.every((result) => result.passed);
+    // now we need to check if the user has already submitted the question
+    const previousSubmission = await Submission.findOne({
+      where: {
+        userId,
+        questionId,
+        passed: true,
+      },
+    });
+    if (passed && !previousSubmission) {
+      await User.increment("score", {
+        by:
+          question.difficultyLevel == "hard"
+            ? 30
+            : question.difficultyLevel == "medium"
+            ? 20
+            : 10,
+        where: { id: userId },
+      });
+    }
 
     const submission = new Submission({
       userId,
       questionId,
-      code,
       languageId,
       result: JSON.stringify(results),
       passed,
@@ -250,8 +294,27 @@ const submitCode = async (req, res) => {
 
     submission
       .save(submission)
-      .then((data) => {
-        res.send(data);
+      .then(async (submission) => {
+        const submissions = await Submission.findAll({
+          where: {
+            questionId: questionId,
+            userId,
+          },
+          include: [
+            {
+              model: User,
+              as: "user",
+              attributes: ["name", "profilePicture"],
+            },
+            {
+              model: Language,
+              as: "language",
+              attributes: ["name"],
+            },
+          ],
+          order: [["createdAt", "DESC"]],
+        });
+        res.send({ submissions });
       })
       .catch((err) => {
         res.status(500).send({
@@ -267,42 +330,10 @@ const submitCode = async (req, res) => {
   }
 };
 
-const getSubmissions = async (req, res) => {
-  const { id } = req.params;
-  const userId = req.user.id;
-
-  try {
-    const submissions = await Submission.findAll({
-      where: {
-        questionId: id,
-        userId,
-      },
-      include: [
-        {
-          model: User,
-          as: "user",
-          attributes: ["name", "profilePicture"],
-        },
-        {
-          model: Language,
-          as: "language",
-          attributes: ["name"],
-        },
-      ],
-    });
-
-    res.json(submissions);
-  } catch (error) {
-    console.error("Error fetching submissions:", error);
-    res.status(500).json({
-      error: "An error occurred while fetching submissions.",
-    });
-  }
-};
 module.exports = {
   create,
   findAll,
   findOne,
   runCode,
-  getSubmissions,
+  submitCode,
 };

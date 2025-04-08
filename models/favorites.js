@@ -34,12 +34,12 @@ module.exports = (Sequelize, DataTypes) => {
   );
 
   Favorite.associate = (models) => {
-    models.User.belongsToMany(models.Question, {
+    Favorite.belongsToMany(models.User, {
       through: Favorite,
-      as: "favoriteQuestions",
+      as: "favoritedQuestions",
       foreignKey: "userId",
     });
-    models.Question.belongsToMany(models.User, {
+    Favorite.belongsToMany(models.Question, {
       through: Favorite,
       as: "favoritedBy",
       foreignKey: "questionId",
